@@ -2,7 +2,7 @@ import type { Config, Context } from "@netlify/functions"
 import { currentMember } from "../lib/auth.mts"
 import { createJob, latestJob } from "../lib/db.mts"
 import { fail, json, readJson } from "../lib/http.mts"
-import { startJob } from "../lib/jobs.mts"
+import { internalBase, startJob } from "../lib/jobs.mts"
 
 // Re-pull one data source: "audit" (your Instagram + Google) or "leaders".
 export default async (req: Request, context: Context) => {
@@ -14,7 +14,7 @@ export default async (req: Request, context: Context) => {
   if (last && (last.status === "queued" || last.status === "running")) return json({ ok: true, job: last.id })
   try {
     const id = await createJob(m.id, kind)
-    await startJob(req, kind, id, m.id)
+    await startJob(req, kind, id, m.id, internalBase(context, req))
     return json({ ok: true, job: id })
   } catch (err) {
     console.error("refresh failed", err)

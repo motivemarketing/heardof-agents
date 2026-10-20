@@ -116,10 +116,15 @@ export async function runLeaders(jobId: string, memberId: string) {
   }
 }
 
-export async function startJob(req: Request, kind: "audit" | "leaders", jobId: string, memberId: string) {
+// The site's own netlify.app address. Always has a valid certificate, unlike a custom domain that is still
+// being set up, so server-to-server calls go here rather than to whatever host the visitor used.
+export function internalBase(context: { site?: { name?: string } }, req: Request): string {
+  const name = context.site?.name
+  return name ? `https://${name}.netlify.app` : new URL(req.url).origin
+}
+
+export async function startJob(req: Request, kind: "audit" | "leaders", jobId: string, memberId: string, base: string) {
   // Background functions answer 202 right away and keep running for up to 15 minutes.
-  // Call them on the deploy's own netlify.app address: a custom domain may not resolve from inside Netlify yet.
-  const base = Netlify.env.get("DEPLOY_URL") || Netlify.env.get("URL") || new URL(req.url).origin
   const url = new URL(`/api/internal/${kind}-run`, base)
   let res: Response
   try {

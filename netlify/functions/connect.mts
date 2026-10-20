@@ -2,7 +2,7 @@ import type { Config, Context } from "@netlify/functions"
 import { currentMember } from "../lib/auth.mts"
 import { createJob, db } from "../lib/db.mts"
 import { cleanHandle, fail, isHandle, json, readJson, str } from "../lib/http.mts"
-import { startJob } from "../lib/jobs.mts"
+import { internalBase, startJob } from "../lib/jobs.mts"
 
 // Setup: saves the agent's market and accounts, then pulls their Instagram and Google data and
 // finds their local leaders in the background.
@@ -30,7 +30,8 @@ export default async (req: Request, context: Context) => {
 
   const auditJob = await createJob(m.id, "audit")
   const leadersJob = await createJob(m.id, "leaders")
-  await Promise.all([startJob(req, "audit", auditJob, m.id), startJob(req, "leaders", leadersJob, m.id)])
+  const base = internalBase(context, req)
+  await Promise.all([startJob(req, "audit", auditJob, m.id, base), startJob(req, "leaders", leadersJob, m.id, base)])
   return json({ ok: true, jobs: { audit: auditJob, leaders: leadersJob } })
   } catch (err) {
     console.error("connect failed", err)
