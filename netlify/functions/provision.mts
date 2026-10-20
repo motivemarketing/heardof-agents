@@ -40,12 +40,30 @@ export default async (req: Request, context: Context) => {
     member = rows[0]
   }
 
-  if (body.send_login !== false) {
+  // send_login (default true): email the link through Resend.
+  // return_link: also hand the link back, so GHL can put it in its own email (or for testing).
+  let loginUrl: string | undefined
+  let emailError: string | undefined
+  if (body.send_login !== false || body.return_link === true) {
     const token = await createLoginToken(member.id)
     const base = Netlify.env.get("APP_URL") ?? new URL(req.url).origin
-    await sendLoginEmail(member, `${base}/?login=${token}`)
+    loginUrl = `${base}/?login=${token}`
+    if (body.send_login !== false) {
+      try {
+        await sendLoginEmail(member, loginUrl)
+      } catch (err) {
+        console.error("login email failed", err)
+        emailError = err instanceof Error ? err.message : "Email failed"
+      }
+    }
   }
-  return json({ ok: true, member_id: member.id, tier: member.tier })
+  return json({
+    ok: true,
+    member_id: member.id,
+    tier: member.tier,
+    ...(emailError ? { email_error: emailError } : {}),
+    ...(body.return_link === true && loginUrl ? { login_url: loginUrl } : {}),
+  })
 }
 
 export const config: Config = { path: "/api/provision", method: "POST" }
