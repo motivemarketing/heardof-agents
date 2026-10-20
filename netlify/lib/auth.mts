@@ -61,8 +61,9 @@ export async function currentMember(context: Context): Promise<Member | null> {
 
 // Server-to-server calls (GHL webhooks, background jobs) send this shared key.
 export function hasServerKey(req: Request, name = "HEARDOF_SERVER_KEY"): boolean {
-  const given = req.headers.get("x-heardof-key") ?? ""
-  const expected = env(name)
+  // Trimmed on both sides: a key pasted into Netlify or a terminal often picks up a stray space or newline.
+  const given = (req.headers.get("x-heardof-key") ?? "").trim()
+  const expected = env(name).trim()
   const a = Buffer.from(given)
   const b = Buffer.from(expected)
   return a.length === b.length && timingSafeEqual(a, b)
