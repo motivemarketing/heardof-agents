@@ -1,0 +1,7 @@
+# Heard Of for Agents · agents.ryanleak.com
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
