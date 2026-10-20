@@ -983,7 +983,7 @@ document.addEventListener("submit", function(e){
     var body={firstName:$("cn-first").value.trim(), lastName:$("cn-last").value.trim(), handle:$("cn-handle").value.trim(), businessName:$("cn-biz").value.trim(), city:$("cn-city").value.trim(), region:$("cn-state").value.trim(), marketSize:$("cn-size").value};
     var btn=$("cnBtn"); btn.disabled=true; btn.textContent="Connecting…";
     api("/api/connect",{method:"POST",body:body}).then(function(r){
-      if(!r.ok){ $("cnErr").textContent=r.error||"Something went wrong"; $("cnErr").hidden=false; btn.disabled=false; btn.textContent="Connect and analyze"; return; }
+      if(!r.ok){ $("cnErr").textContent=r.error||("Something went wrong (error "+r._status+"). Try again in a minute."); $("cnErr").hidden=false; btn.disabled=false; btn.textContent="Connect and analyze"; return; }
       S.profile.name=(body.firstName+" "+body.lastName).trim(); S.profile.handle="@"+body.handle.replace(/^@/,""); S.profile.city=body.city; S.profile.state=body.region; S.profile.marketSize=body.marketSize; S.profile.businessName=body.businessName;
       S.leaders.source="auto";
       JOBS={audit:{id:r.jobs.audit,status:"queued"},leaders:{id:r.jobs.leaders,status:"queued"}};

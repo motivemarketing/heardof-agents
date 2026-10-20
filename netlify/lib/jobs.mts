@@ -118,11 +118,24 @@ export async function runLeaders(jobId: string, memberId: string) {
 
 export async function startJob(req: Request, kind: "audit" | "leaders", jobId: string, memberId: string) {
   // Background functions answer 202 right away and keep running for up to 15 minutes.
-  const url = new URL(`/api/internal/${kind}-run`, req.url)
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-heardof-key": Netlify.env.get("HEARDOF_SERVER_KEY") ?? "" },
-    body: JSON.stringify({ jobId, memberId }),
-  })
-  if (res.status !== 202 && !res.ok) throw new Error(`Couldn't start ${kind}: ${res.status}`)
+  // Call them on the deploy's own netlify.app address: a custom domain may not resolve from inside Netlify yet.
+  const base = Netlify.env.get("DEPLOY_URL") || Netlify.env.get("URL") || new URL(req.url).origin
+  const url = new URL(`/api/internal/${kind}-run`, base)
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-heardof-key": Netlify.env.get("HEARDOF_SERVER_KEY") ?? "" },
+      body: JSON.stringify({ jobId, memberId }),
+      signal: AbortSignal.timeout(10_000),
+    })
+  } catch (err) {
+    const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err)
+    await setJob(jobId, "error", undefined, `Couldn't start the ${kind} job (${cause}).`)
+    throw new Error(`Couldn't start the ${kind} job at ${url.origin}: ${cause}`)
+  }
+  if (res.status !== 202 && !res.ok) {
+    await setJob(jobId, "error", undefined, `Couldn't start the ${kind} job (${res.status}).`)
+    throw new Error(`Couldn't start the ${kind} job: ${res.status}`)
+  }
 }

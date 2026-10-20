@@ -12,9 +12,14 @@ export default async (req: Request, context: Context) => {
   const kind = body?.kind === "leaders" ? "leaders" : "audit"
   const last = await latestJob(m.id, kind)
   if (last && (last.status === "queued" || last.status === "running")) return json({ ok: true, job: last.id })
-  const id = await createJob(m.id, kind)
-  await startJob(req, kind, id, m.id)
-  return json({ ok: true, job: id })
+  try {
+    const id = await createJob(m.id, kind)
+    await startJob(req, kind, id, m.id)
+    return json({ ok: true, job: id })
+  } catch (err) {
+    console.error("refresh failed", err)
+    return fail(500, err instanceof Error ? err.message : "Couldn't start the refresh")
+  }
 }
 
 export const config: Config = { path: "/api/refresh", method: "POST" }

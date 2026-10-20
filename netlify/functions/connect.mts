@@ -18,6 +18,7 @@ export default async (req: Request, context: Context) => {
   if (!city) return fail(400, "Enter the city you serve most")
   const size = ["small", "mid", "metro"].includes(str(body.marketSize, 10)) ? str(body.marketSize, 10) : "mid"
 
+  try {
   await db().sql`
     UPDATE members SET ig_handle = ${handle}, business_name = ${str(body.businessName, 120) || null},
       city = ${city}, region = ${str(body.region, 40) || null}, market_size = ${size},
@@ -31,6 +32,10 @@ export default async (req: Request, context: Context) => {
   const leadersJob = await createJob(m.id, "leaders")
   await Promise.all([startJob(req, "audit", auditJob, m.id), startJob(req, "leaders", leadersJob, m.id)])
   return json({ ok: true, jobs: { audit: auditJob, leaders: leadersJob } })
+  } catch (err) {
+    console.error("connect failed", err)
+    return fail(500, err instanceof Error ? err.message : "Couldn't save your details")
+  }
 }
 
 export const config: Config = { path: "/api/connect", method: "POST" }
